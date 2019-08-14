@@ -68,3 +68,9 @@ test-endpoints.pid
 source-patch-1*
 evergreen 
 !cmd/evergreen
+_obj
+
+# VS Code Extension
+node_modules
+out
+*.vsix
