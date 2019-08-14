@@ -11,7 +11,7 @@ import {
 } from "vscode-languageserver";
 import * as YAML from "yaml";
 
-import { contains, execShellCommand } from "./util";
+import { contains, execShellCommand, strip } from "./util";
 
 export default class EvergreenDocument {
   private connection: IConnection;
@@ -167,6 +167,10 @@ export default class EvergreenDocument {
   private onFunctionReferences(pos: Position): Location[] {
     const allLines = this.contentLines();
     const selectedLine = allLines[pos.line];
+    // TODO: find the other usages of this function
+    if (contains(selectedLine, "- func")) {
+      return [];
+    }
     const locations: Location[] = [];
 
     const funcNames = getFullFunctionNames(selectedLine);
@@ -182,6 +186,7 @@ export default class EvergreenDocument {
         // it's a usage
 
         for (let f of funcNames) {
+          f = strip(f);
           if (!contains(currentLine, f)) {
             continue;
           }
@@ -263,6 +268,7 @@ export default class EvergreenDocument {
   private functionDefinition(pos: Position): Definition {
     const allLines = this.contentLines();
     const selectedLine = allLines[pos.line];
+
     const functionUsageName = getFullFunctionUsageName(selectedLine);
     const allFuncs: string[] = this.functions().concat(
       getAllFunctionNames(allLines)
@@ -358,15 +364,15 @@ function getEvgErrorLines(filePath: string): Promise<string> {
 }
 
 function getFullFunctionNames(fullLine: string): string[] {
-  const match = /.*"(.*)":(.*&(.*))?/g.exec(fullLine);
+  const match = /\s*(.*)?:(.*&(.*))?/g.exec(fullLine);
 
   if (match == null) {
     return [];
   }
   if (match.length == 2) {
-    return [match[1]];
+    return [match[1].replace(/"'/g, "")];
   } else if (match.length == 4) {
-    return [match[1], `*${match[3]}`];
+    return [match[1].replace(/"'/g, ""), `*${match[3]}`];
   }
   return [];
 }
